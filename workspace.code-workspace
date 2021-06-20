@@ -6,6 +6,10 @@
 		{
 			"name": "GoGreen",
 			"path": "."
+		},
+		{
+			"name": "pHSensor",
+			"path": "..\\pHSensor"
 		}
 	],
 	"settings": {}

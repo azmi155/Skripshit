@@ -25,6 +25,7 @@ uint8_t temprature_sens_read();
 #define ESPADC 4096.0   //the esp Analog Digital Convertion value
 #define ESPVOLTAGE 3300 //the esp voltage supply value
 #define PH_PIN 35       //the esp gpio data pin number
+#define offset 1.5
 float voltage, phValue, temperature = 25;
 DFRobot_ESP_PH_WITH_ADC ph;
 
@@ -99,154 +100,155 @@ void callback(char *topic, byte *payload, unsigned int length)
     {
       Serial.println("on");
       digitalWrite(BUILTIN_LED, HIGH);
-      digitalWrite(pompa, 1);
+      digitalWrite(pompa, HIGH);
     }
     else if (messageTemp == "0")
     {
       Serial.println("off");
       digitalWrite(BUILTIN_LED, LOW);
-      digitalWrite(pompa, 0);
+      digitalWrite(pompa, LOW);
     }
   }
-  }
+}
 
-  void reconnect()
+void reconnect()
+{
+  // Loop until we're reconnected
+  while (!client.connected())
   {
-    // Loop until we're reconnected
-    while (!client.connected())
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str()))
     {
-      Serial.print("Attempting MQTT connection...");
-      // Create a random client ID
-      String clientId = "ESP32Client-";
-      clientId += String(random(0xffff), HEX);
-      // Attempt to connect
-      if (client.connect(clientId.c_str()))
-      {
-        Serial.println("connected");
-        // Once connected, publish an announcement...
-        client.publish(outMqtt, "Connected");
-        // ... and resubscribe
-        client.subscribe(inPompa);
-      }
-      else
-      {
-        Serial.print("failed, rc=");
-        Serial.print(client.state());
-        Serial.println(" try again in 5 seconds");
-        // Wait 5 seconds before retrying
-        delay(5000);
-      }
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish(outMqtt, "Connected");
+      // ... and resubscribe
+      client.subscribe(inPompa);
+    }
+    else
+    {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
     }
   }
+}
 
-  void setup()
+void setup()
+{
+  pinMode(2, OUTPUT);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echhoPin, INPUT);
+  pinMode(pompa, OUTPUT);
+  pinMode(BUILTIN_LED, OUTPUT);
+  Serial.begin(9600);
+  digitalWrite(pompa, LOW);
+  setup_wifi();
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+  ph.begin();
+  timeClient.begin();
+}
+
+void loop()
+{
+
+  timeClient.update();
+
+  if (!client.connected())
   {
-    pinMode(2, OUTPUT);
-    pinMode(trigPin, OUTPUT);
-    pinMode(echhoPin, INPUT);
-    pinMode(pompa, OUTPUT);
-    pinMode(BUILTIN_LED, OUTPUT);
-    Serial.begin(9600);
-    digitalWrite(pompa, LOW);
-    setup_wifi();
-    client.setServer(mqtt_server, 1883);
-    client.setCallback(callback);
-    ph.begin();
-    timeClient.begin();
+    reconnect();
   }
+  client.loop();
 
-  void loop()
+  // unsigned long now = millis();
+  // if (now - lastMsg > 2000)
+  // {
+  //   lastMsg = now;
+  //   ++value;
+  //   snprintf(msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
+  //   Serial.print("Publish message: ");
+  //   Serial.println(msg);
+  //   client.publish("1710510160UlulAzmi/esp32/v1", msg);
+  //}
+
+  //--------------------------------------------------
+
+  static unsigned long timepoint = millis();
+  if (millis() - timepoint > 1000U) //time interval: 1s
   {
+    timepoint = millis();
+    //voltage = rawPinValue / esp32ADC * esp32Vin
+    Serial.println("-----------------");
+    Serial.print("timestamp : ");
+    Serial.println(timeClient.getFormattedTime());
 
-    timeClient.update();
+    voltage = analogRead(PH_PIN) * 5.0 / 10240; // read the voltage
+    //voltage = analogRead(PH_PIN);
+    Serial.print("voltage:");
+    Serial.println(voltage, 4);
 
-    if (!client.connected())
-    {
-      reconnect();
-    }
-    client.loop();
+    dtostrf(voltage, 6, 3, res);
 
-    // unsigned long now = millis();
-    // if (now - lastMsg > 2000)
-    // {
-    //   lastMsg = now;
-    //   ++value;
-    //   snprintf(msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
-    //   Serial.print("Publish message: ");
-    //   Serial.println(msg);
-    //   client.publish("1710510160UlulAzmi/esp32/v1", msg);
-    //}
+    // Serial.print("Publish message: ");
+    snprintf(msg, MSG_BUFFER_SIZE, res, value);
+    client.publish("1710510160UlulAzmi/esp32/voltase", msg);
 
-    //--------------------------------------------------
+    //temperature = readTemperature();  // read your temperature sensor to execute temperature compensation
+    Serial.print("temperature:");
+    Serial.print(temperature, 1);
+    Serial.println("^C");
 
-    static unsigned long timepoint = millis();
-    if (millis() - timepoint > 1000U) //time interval: 1s
-    {
-      timepoint = millis();
-      //voltage = rawPinValue / esp32ADC * esp32Vin
-      Serial.println("-----------------");
-      Serial.print("timestamp : ");
-      Serial.println(timeClient.getFormattedTime());
+    dtostrf(temperature, 6, 3, res);
+    // Serial.print("Publish message: ");
+    snprintf(msg, MSG_BUFFER_SIZE, res, value);
+    client.publish("1710510160UlulAzmi/esp32/temperature", msg);
 
-      voltage = analogRead(PH_PIN) / ESPADC * ESPVOLTAGE; // read the voltage
+    //phValue = ph.readPH(voltage, temperature); // convert voltage to pH with temperature compensation
+    phValue = 3.5 * voltage + offset;
+    Serial.print("pH:");
+    Serial.println(phValue, 4);
 
-      Serial.print("voltage:");
-      Serial.println(voltage, 4);
+    dtostrf(phValue, 6, 3, res);
+    // Serial.print("Publish message: ");
+    snprintf(msg, MSG_BUFFER_SIZE, res, value);
+    client.publish("1710510160UlulAzmi/esp32/ph", msg);
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
 
-      dtostrf(voltage, 6, 3, res);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
 
-      // Serial.print("Publish message: ");
-      snprintf(msg, MSG_BUFFER_SIZE, res, value);
-      client.publish("1710510160UlulAzmi/esp32/voltase", msg);
+    duration = pulseIn(echhoPin, HIGH);
 
-      //temperature = readTemperature();  // read your temperature sensor to execute temperature compensation
-      Serial.print("temperature:");
-      Serial.print(temperature, 1);
-      Serial.println("^C");
+    distance = duration * 0.0343 / 2;
+    Serial.print(distance);
+    Serial.println(" cm");
 
-      dtostrf(temperature, 6, 3, res);
-      // Serial.print("Publish message: ");
-      snprintf(msg, MSG_BUFFER_SIZE, res, value);
-      client.publish("1710510160UlulAzmi/esp32/temperature", msg);
+    dtostrf(distance, 3, 0, res);
+    // Serial.print("Publish message: ");
+    snprintf(msg, MSG_BUFFER_SIZE, res, value);
+    client.publish("1710510160UlulAzmi/esp32/whaterlevel", msg);
 
-      phValue = ph.readPH(voltage, temperature); // convert voltage to pH with temperature compensation
-      Serial.print("pH:");
-      Serial.println(phValue, 4);
+    suhu = (temprature_sens_read() - 32) / 1.8;
 
-      dtostrf(phValue, 6, 3, res);
-      // Serial.print("Publish message: ");
-      snprintf(msg, MSG_BUFFER_SIZE, res, value);
-      client.publish("1710510160UlulAzmi/esp32/ph", msg);
-      digitalWrite(trigPin, LOW);
-      delayMicroseconds(2);
-
-      digitalWrite(trigPin, HIGH);
-      delayMicroseconds(10);
-      digitalWrite(trigPin, LOW);
-
-      duration = pulseIn(echhoPin, HIGH);
-
-      distance = duration * 0.0343 / 2;
-      Serial.print(distance);
-      Serial.println(" cm");
-
-      dtostrf(distance, 3, 0, res);
-      // Serial.print("Publish message: ");
-      snprintf(msg, MSG_BUFFER_SIZE, res, value);
-      client.publish("1710510160UlulAzmi/esp32/whaterlevel", msg);
-
-      suhu = (temprature_sens_read() - 32) / 1.8;
-
-      Serial.print("Temperature: ");
-      Serial.print(suhu);
-      // Convert raw temperature in F to Celsius degrees
-      // Serial.print((temprature_sens_read() - 32) / 1.8);
-      Serial.println(" C");
-      dtostrf(suhu, 3, 0, res);
-      // Serial.print("Publish message: ");
-      snprintf(msg, MSG_BUFFER_SIZE, res, value);
-      client.publish("1710510160UlulAzmi/esp32/suhu", msg);
-      delay(100);
-    }
-    ph.calibration(voltage, temperature);
+    Serial.print("Temperature: ");
+    Serial.print(suhu);
+    // Convert raw temperature in F to Celsius degrees
+    // Serial.print((temprature_sens_read() - 32) / 1.8);
+    Serial.println(" C");
+    dtostrf(suhu, 3, 0, res);
+    // Serial.print("Publish message: ");
+    snprintf(msg, MSG_BUFFER_SIZE, res, value);
+    client.publish("1710510160UlulAzmi/esp32/suhu", msg);
+    delay(100);
   }
+  ph.calibration(voltage, temperature);
+}
