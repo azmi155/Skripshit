@@ -253,6 +253,9 @@ void loop()
   ph.calibration(voltage, temperature);
 }
 
+float uAnggota, uRendah, uSedang, uTinggi,
+uAsam, uNetral, uBasa, uDingin, uNormal, uPanas;
+
 //fuzzyfikasi
 void fuzzy()
 {
@@ -271,7 +274,6 @@ void fuzzy()
   uAsam = uAnggota;
   hitung_anggota(2, phValue, 3, 6, 9);
   uNetral = uAnggota;
-  = uAnggota;
   hitung_anggota(3, phValue, 6, 9, 9);
   uBasa = uAnggota;
 
@@ -316,26 +318,26 @@ void hitung_anggota(int anggota, float Nilai, float A, float B, float C)
   }
 }
 
-int fuzzy_setSuhu[3][3] = {
+float fuzzy_setSuhu[3][3] = {
     {15, 15, 35},
     {15, 35, 50},
     {35, 50, 50},
-}
+};
 
-int fuzzy_setPh[3][3] = {
-    {1, 1, 2},
-    {1, 2, 3},
-    {2, 3, 3},
-}
+float fuzzy_setPh[3][3] = {
+    {15, 15, 35},
+    {15, 35, 50},
+    {35, 50, 50},
+};
 
-void defuzzyfikasi()
-{
-  float pembilangSuhu = 0, penyebutSuhu = 0, 
-  pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph;
+void
+defuzzyfikasi(){
+  float pembilangSuhu = 0, penyebutSuhu = 0,
+        pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph;
 
-  N_suhu[3] = {};
-  N_ph[3] = {};
-  N_volume[3] = {};
+  float N_suhu[3] = {};
+  float N_ph[3] = {};
+  float N_volume[3] = {};
 
   for (int set = 0; set < 9;)
   {
@@ -353,61 +355,64 @@ void defuzzyfikasi()
 
         //volume
         float data_uVolume[3] = {uRendah, uSedang, uTinggi};
-        N_volume[i] = data_uVolume[i];
+        float N_volume[i] = data_uVolume[i];
 
-        kondisiSuhu = max(N_suhu[i], kondisiSuhu);
-        kondisiPh = max(N_ph[i], kondisiPH);
-        kondisiVolume = max(N_volume[i], kondisiVolume);
+        float kondisiSuhu = max(N_suhu[i], kondisiSuhu);
+        float kondisiPh = max(N_ph[i], kondisiPH);
+        float kondisiVolume = max(N_volume[i], kondisiVolume);
 
         //coa
         //suhu
-        Min_suhu[set] = min(N_suhu[i], N_volume[j]);
-        pembilangSuhu =+ Min_suhu[set] * fuzzy_setSuhu[i][j];
-        penyebutSuhu =+ Min_suhu[set];
+        float Min_suhu[set] = min(N_suhu[i], N_volume[j]);
+        float pembilangSuhu = +Min_suhu[set] * fuzzy_setSuhu[i][j];
+        float penyebutSuhu = +Min_suhu[set];
 
         //ph
-        Min_ph[set] = min(N_ph[i], N_volume[j]);
-        pembilangPh =+ Min_ph[set] * fuzzy_setPh[i][j];
-        penyebutPh =+ Min_ph[set];
+        float Min_ph[set] = min(N_ph[i], N_volume[j]);
+        float pembilangPh = +Min_ph[set] * fuzzy_setPh[i][j];
+        float penyebutPh = +Min_ph[set];
         delay(5);
-        set++
+        set++;
       }
-      
     }
     //coa
 
     coa_suhu = pembilangSuhu / penyebutSuhu;
-    keluaranSuhu = coa_suhu;
+    float keluaranSuhu = coa_suhu;
 
-    coa_ph = pembilangPh/penyebutPh;
-    keluaranPh = coa_ph;
-
+    float coa_ph = pembilangPh / penyebutPh;
+    float keluaranPh = coa_ph;
   }
-  
 }
 
-void basis_aturan_fuzzySuhu(){
+void basis_aturan_fuzzySuhu()
+{
   if (kondisiSuhu == uDingin && kondisiVolume == uRendah)
   {
     OutputFuzzySuhu = "Lambat";
-  }else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
   {
     OutputFuzzySuhu = "Lambat";
-  }else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
   {
     OutputFuzzySuhu = "Sedang";
-  } 
+  }
 }
 
-void basis_aturan_fuzzyPh(){
+void basis_aturan_fuzzyPh()
+{
   if (kondisiSuhu == uDingin && kondisiVolume == uRendah)
   {
     OutputFuzzySuhu = "Lambat";
-  }else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
   {
     OutputFuzzySuhu = "Lambat";
-  }else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
   {
     OutputFuzzySuhu = "Sedang";
-  } 
+  }
 }
