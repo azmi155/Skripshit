@@ -261,6 +261,7 @@ void fuzzy()
 {
   // int uAnggota;
   //tinggi air
+  //angka 4 diganti pake variabel yg nampung air
   uAnggota = 0;
   hitung_anggota(1, 4, 0, 3, 6);
   uRendah = uAnggota;
@@ -364,8 +365,8 @@ defuzzyfikasi(){
         //coa
         //suhu
         float Min_suhu[set] = min(N_suhu[i], N_volume[j]);
-        float pembilangSuhu = +Min_suhu[set] * fuzzy_setSuhu[i][j];
-        float penyebutSuhu = +Min_suhu[set];
+        float pembilangSuhu =+ Min_suhu[set] * fuzzy_setSuhu[i][j];
+        float penyebutSuhu =+ Min_suhu[set];
 
         //ph
         float Min_ph[set] = min(N_ph[i], N_volume[j]);
