@@ -358,7 +358,7 @@ defuzzyfikasi(){
         float N_volume[i] = data_uVolume[i];
 
         float kondisiSuhu = max(N_suhu[i], kondisiSuhu);
-        float kondisiPh = max(N_ph[i], kondisiPH);
+        float kondisiPh = max(N_ph[i], kondisiPh);
         float kondisiVolume = max(N_volume[i], kondisiVolume);
 
         //coa
