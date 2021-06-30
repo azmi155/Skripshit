@@ -256,6 +256,15 @@ void loop()
 float uAnggota, uRendah, uSedang, uTinggi,
 uAsam, uNetral, uBasa, uDingin, uNormal, uPanas;
 
+
+float keluaranSuhu;
+float coa_ph;
+float keluaranPh;
+
+float kondisiSuhu;
+float kondisiPh;
+float kondisiVolume;
+
 //fuzzyfikasi
 void fuzzy()
 {
@@ -331,8 +340,7 @@ float fuzzy_setPh[3][3] = {
     {35, 50, 50},
 };
 
-void
-defuzzyfikasi(){
+void defuzzyfikasi(){
   float pembilangSuhu = 0, penyebutSuhu = 0,
         pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph;
 
@@ -348,43 +356,44 @@ defuzzyfikasi(){
       {
         //suhu
         float data_uSuhu[3] = {uDingin, uNormal, uPanas};
-        N_suhu[i] = data_uSuhu[i];
+        N_suhu[i] = {data_uSuhu[i]};
 
         //ph
         float data_uPh[3] = {uAsam, uNetral, uBasa};
-        N_ph[i] = data_uPh[i];
+        N_ph[i] = {data_uPh[i]};
 
         //volume
         float data_uVolume[3] = {uRendah, uSedang, uTinggi};
-        float N_volume[i] = data_uVolume[i];
+        float N_volume[i] = {data_uVolume[i]};
 
-        float kondisiSuhu = max(N_suhu[i], kondisiSuhu);
-        float kondisiPh = max(N_ph[i], kondisiPh);
-        float kondisiVolume = max(N_volume[i], kondisiVolume);
+        kondisiSuhu = max(N_suhu[i], kondisiSuhu);
+        kondisiPh = max(N_ph[i], kondisiPh);
+        kondisiVolume = max(N_volume[i], kondisiVolume);
 
         //coa
         //suhu
-        float Min_suhu[set] = min(N_suhu[i], N_volume[j]);
+        float Min_suhu[set] = {min(N_suhu[i], N_volume[j])};
         float pembilangSuhu =+ Min_suhu[set] * fuzzy_setSuhu[i][j];
         float penyebutSuhu =+ Min_suhu[set];
 
         //ph
-        float Min_ph[set] = min(N_ph[i], N_volume[j]);
+        float Min_ph[set] = {min(N_ph[i], N_volume[j])};
         float pembilangPh = +Min_ph[set] * fuzzy_setPh[i][j];
         float penyebutPh = +Min_ph[set];
         delay(5);
         set++;
       }
     }
-    //coa
+  //coa
 
     coa_suhu = pembilangSuhu / penyebutSuhu;
-    float keluaranSuhu = coa_suhu;
+    keluaranSuhu = coa_suhu;
 
-    float coa_ph = pembilangPh / penyebutPh;
-    float keluaranPh = coa_ph;
+    coa_ph = pembilangPh / penyebutPh;
+    keluaranPh = coa_ph;
   }
 }
+String OutputFuzzySuhu;
 
 void basis_aturan_fuzzySuhu()
 {
@@ -401,6 +410,8 @@ void basis_aturan_fuzzySuhu()
     OutputFuzzySuhu = "Sedang";
   }
 }
+
+
 
 void basis_aturan_fuzzyPh()
 {
