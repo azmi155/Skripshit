@@ -254,8 +254,7 @@ void loop()
 }
 
 float uAnggota, uRendah, uSedang, uTinggi,
-uAsam, uNetral, uBasa, uDingin, uNormal, uPanas;
-
+    uAsam, uNetral, uBasa, uDingin, uNormal, uPanas;
 
 float keluaranSuhu;
 float coa_ph;
@@ -264,6 +263,37 @@ float keluaranPh;
 float kondisiSuhu;
 float kondisiPh;
 float kondisiVolume;
+
+void hitung_anggota(int anggota, float Nilai, float A, float B, float C)
+{
+  switch (anggota)
+  {
+  case 1:
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 1;
+    if ((Nilai > B) && (Nilai < C))
+      uAnggota = (Nilai - A) / (B - A);
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 0;
+    break;
+  case 2:
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 1;
+    if ((Nilai > B) && (Nilai < C))
+      uAnggota = (Nilai - A) / (B - A);
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 0;
+    break;
+  case 3:
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 1;
+    if ((Nilai > B) && (Nilai < C))
+      uAnggota = (Nilai - A) / (B - A);
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 0;
+    break;
+  }
+}
 
 //fuzzyfikasi
 void fuzzy()
@@ -297,37 +327,6 @@ void fuzzy()
   uPanas = uAnggota;
 }
 
-void hitung_anggota(int anggota, float Nilai, float A, float B, float C)
-{
-  switch (anggota)
-  {
-  case 1:
-    if ((Nilai >= A) && (Nilai <= B))
-      uAnggota = 1;
-    if ((Nilai > B) && (Nilai < C))
-      uAnggota = (Nilai - A) / (B - A);
-    if ((Nilai >= A) && (Nilai <= B))
-      uAnggota = 0;
-    break;
-  case 2:
-    if ((Nilai >= A) && (Nilai <= B))
-      uAnggota = 1;
-    if ((Nilai > B) && (Nilai < C))
-      uAnggota = (Nilai - A) / (B - A);
-    if ((Nilai >= A) && (Nilai <= B))
-      uAnggota = 0;
-    break;
-  case 3:
-    if ((Nilai >= A) && (Nilai <= B))
-      uAnggota = 1;
-    if ((Nilai > B) && (Nilai < C))
-      uAnggota = (Nilai - A) / (B - A);
-    if ((Nilai >= A) && (Nilai <= B))
-      uAnggota = 0;
-    break;
-  }
-}
-
 float fuzzy_setSuhu[3][3] = {
     {15, 15, 35},
     {15, 35, 50},
@@ -340,7 +339,8 @@ float fuzzy_setPh[3][3] = {
     {35, 50, 50},
 };
 
-void defuzzyfikasi(){
+void defuzzyfikasi()
+{
   float pembilangSuhu = 0, penyebutSuhu = 0,
         pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph;
 
@@ -373,8 +373,8 @@ void defuzzyfikasi(){
         //coa
         //suhu
         float Min_suhu[set] = {min(N_suhu[i], N_volume[j])};
-        float pembilangSuhu =+ Min_suhu[set] * fuzzy_setSuhu[i][j];
-        float penyebutSuhu =+ Min_suhu[set];
+        float pembilangSuhu = +Min_suhu[set] * fuzzy_setSuhu[i][j];
+        float penyebutSuhu = +Min_suhu[set];
 
         //ph
         float Min_ph[set] = {min(N_ph[i], N_volume[j])};
@@ -384,7 +384,7 @@ void defuzzyfikasi(){
         set++;
       }
     }
-  //coa
+    //coa
 
     coa_suhu = pembilangSuhu / penyebutSuhu;
     keluaranSuhu = coa_suhu;
@@ -410,8 +410,6 @@ void basis_aturan_fuzzySuhu()
     OutputFuzzySuhu = "Sedang";
   }
 }
-
-
 
 void basis_aturan_fuzzyPh()
 {
