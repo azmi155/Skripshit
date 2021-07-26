@@ -8,6 +8,8 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <Adafruit_Sensor.h>
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -38,6 +40,8 @@ uint8_t temprature_sens_read();
 #define trigPin 27
 #define echhoPin 26
 
+
+
 //-------------------------------
 WiFiUDP ntpUDP;
 WiFiClient espClient;
@@ -46,6 +50,8 @@ DFRobot_ESP_PH_WITH_ADC ph;
 DHT_Unified dht(DHTPIN, DHTTYPE);
 NTPClient timeClient(ntpUDP, "id.pool.ntp.org", 28800);
 sensors_event_t event;
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 //----------WIFI----------------
 const char *ssid = "azmi2";
@@ -66,13 +72,47 @@ int distance;
 uint32_t delayMS;
 //NTPClient timeClient(ntpUDP);
 
+
+float uAnggota, uRendah, uSedang, uTinggi,
+    uAsam, uNetral, uBasa, uDingin, uNormal, uPanas;
+
+float keluaranSuhu;
+float coa_ph;
+float keluaranPh;
+float kondisiSuhu;
+float kondisiPh;
+float kondisiVolume;
+float suhuArea;
+String OutputFuzzySuhu;
+
+
+byte Heart[8] = {
+0b00000,
+0b01010,
+0b11111,
+0b11111,
+0b01110,
+0b00100,
+0b00000,
+0b00000
+};
+
+
 void setup_wifi()
 {
-
-  delay(10);
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(1,0);
+  lcd.print("SKRIPSHIT!!");
+  lcd.setCursor(1,1);
+  lcd.print("--ULUL AZMI--");
+  delay(1000);
+  lcd.clear();
   Serial.println();
   Serial.print("Connecting to ");
   Serial.print(ssid);
+  lcd.print("WIFI: ");
+  lcd.print(ssid);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -82,10 +122,19 @@ void setup_wifi()
     Serial.print(" . ");
   }
   randomSeed(micros());
+  lcd.setCursor(1,0);
   Serial.println("");
   Serial.println("Wifi Connected");
+  lcd.clear();
+  lcd.setCursor(0,1);
+  lcd.print("CONNECTED");
+  lcd.setCursor(1,1);
+  lcd.print("IP: ");
+  lcd.print(WiFi.localIP());
   Serial.println("IP Address: ");
   Serial.print(WiFi.localIP());
+
+  
 }
 
 void callback(char *topic, byte *payload, unsigned int length)
@@ -156,10 +205,10 @@ void reconnect()
       // ... and resubscribe
       client.subscribe(inPompa);
       client.subscribe(inNutrisi);
-      client.subscribe("ph");
-      client.subscribe("1710510160@stmikbumigora.ac.id/sensor/suhu");
-      client.subscribe("1710510160@stmikbumigora.ac.id/sensor/levelair");
-      client.subscribe("1710510160@stmikbumigora.ac.id/sensor/suhuair");
+      // client.subscribe("1710510160@stmikbumigora.ac.id/sensor/ph");
+      // client.subscribe("1710510160@stmikbumigora.ac.id/sensor/suhu");
+      // client.subscribe("1710510160@stmikbumigora.ac.id/sensor/levelair");
+      // client.subscribe("1710510160@stmikbumigora.ac.id/sensor/suhuair");
     }
     else
     {
@@ -171,6 +220,209 @@ void reconnect()
     }
   }
 }
+
+void outputLCD(float msg1, float msg2, float msg3, float msg4){
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+
+  lcd.setCursor(0,0);
+  lcd.print("PH:");
+  lcd.print(msg1);
+  lcd.setCursor(7,0);
+  lcd.print("AIR:");
+  lcd.print(msg2);
+  lcd.setCursor(0,1);
+  lcd.print("TMP:");
+  lcd.print(msg3);
+  lcd.setCursor(7,1);
+  lcd.print("WTMP:");
+  lcd.print(msg4);
+}
+
+///////////////////////////////////////
+
+void hitung_anggota(int anggota, float Nilai, float A, float B, float C)
+{
+  switch (anggota)
+  {
+  case 1:
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 1;
+    if ((Nilai > B) && (Nilai < C))
+      uAnggota = (Nilai - A) / (B - A);
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 0;
+    break;
+  case 2:
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 1;
+    if ((Nilai > B) && (Nilai < C))
+      uAnggota = (Nilai - A) / (B - A);
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 0;
+    break;
+  case 3:
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 1;
+    if ((Nilai > B) && (Nilai < C))
+      uAnggota = (Nilai - A) / (B - A);
+    if ((Nilai >= A) && (Nilai <= B))
+      uAnggota = 0;
+    break;
+  }
+}
+
+//fuzzyfikasi
+void fuzzy()
+{
+  // int uAnggota;
+  //tinggi air
+  //angka 4 diganti pake variabel yg nampung air
+  uAnggota = 0;
+  hitung_anggota(1, distance, 0, 3, 6);
+  uRendah = uAnggota;
+  hitung_anggota(2, distance, 3, 6, 9);
+  uSedang = uAnggota;
+  hitung_anggota(3, distance, 6, 9, 9);
+  uTinggi = uAnggota;
+
+  //Ph
+  uAnggota = 0;
+  hitung_anggota(1, phValue, 0, 3, 6);
+  uAsam = uAnggota;
+  hitung_anggota(2, phValue, 3, 6, 9);
+  uNetral = uAnggota;
+  hitung_anggota(3, phValue, 6, 9, 9);
+  uBasa = uAnggota;
+  
+
+  //suhu
+  uAnggota = 0;
+  hitung_anggota(1, event.temperature, 0, 3, 6);
+  uDingin = uAnggota;
+  hitung_anggota(2, event.temperature, 3, 6, 9);
+  uNormal = uAnggota;
+  hitung_anggota(3, event.temperature, 6, 9, 9);
+  uPanas = uAnggota;
+
+  Serial.print("FUZZY");
+}
+
+float fuzzy_setSuhu[3][3] = {
+    {15, 15, 35},
+    {15, 35, 50},
+    {35, 50, 50},
+};
+
+float fuzzy_setPh[3][3] = {
+    {15, 15, 35},
+    {15, 35, 50},
+    {35, 50, 50},
+};
+
+void defuzzyfikasi()
+{
+  Serial.println("MASUK DEFUZZY");
+  float pembilangSuhu = 0, penyebutSuhu = 0,
+        pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph;
+
+  float N_suhu[3] = {};
+  float N_ph[3] = {};
+  float N_volume[3] = {};
+
+  for (int set = 0; set < 9;)
+  {
+    Serial.println("Perulangan 1");
+    for (int i = 0; i < 3; i++)
+    {
+      Serial.println("Perulangan 2");
+      for (int j = 0; j < 3; j++)
+      {
+        Serial.println("Perulangan 3");
+        //suhu
+        float data_uSuhu[3] = {uDingin, uNormal, uPanas};
+        N_suhu[i] = {data_uSuhu[i]};
+
+        //ph
+        float data_uPh[3] = {uAsam, uNetral, uBasa};
+        N_ph[i] = {data_uPh[i]};
+
+        //volume
+        float data_uVolume[3] = {uRendah, uSedang, uTinggi};
+        float N_volume[i] = {data_uVolume[i]};
+
+        kondisiSuhu = max(N_suhu[i], kondisiSuhu);
+        kondisiPh = max(N_ph[i], kondisiPh);
+        kondisiVolume = max(N_volume[i], kondisiVolume);
+
+        //coa
+        //suhu
+        float Min_suhu[set] = {min(N_suhu[i], N_volume[j])};
+        float pembilangSuhu = +Min_suhu[set] * fuzzy_setSuhu[i][j];
+        float penyebutSuhu = +Min_suhu[set];
+
+        //ph
+        float Min_ph[set] = {min(N_ph[i], N_volume[j])};
+        pembilangPh = +Min_ph[set] * fuzzy_setPh[i][j];
+        penyebutPh = +Min_ph[set];
+        delay(5);
+        set++;
+        Serial.print("LAGI HITUNG");
+      }
+    }
+    //coa
+    coa_suhu = pembilangSuhu / penyebutSuhu;
+    keluaranSuhu = coa_suhu;
+
+    coa_ph = pembilangPh / penyebutPh;
+    keluaranPh = coa_ph;
+    Serial.print("KELUARAN PH: ");
+    Serial.print(keluaranPh);
+  }
+  Serial.print("DEFUZZY");
+}
+
+
+void basis_aturan_fuzzySuhu()
+{
+  if (kondisiSuhu == uDingin && kondisiVolume == uRendah)
+  {
+    OutputFuzzySuhu = "Lambat";
+    Serial.println(OutputFuzzySuhu);
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
+  {
+    OutputFuzzySuhu = "Lambat";
+    Serial.println(OutputFuzzySuhu);
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
+  {
+    OutputFuzzySuhu = "Sedang";
+    Serial.println(OutputFuzzySuhu);
+  }
+}
+
+void basis_aturan_fuzzyPh()
+{
+  if (kondisiSuhu == uDingin && kondisiVolume == uRendah)
+  {
+    OutputFuzzySuhu = "Lambat";
+    Serial.println(OutputFuzzySuhu);
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
+  {
+    OutputFuzzySuhu = "Lambat";
+    Serial.println(OutputFuzzySuhu);
+  }
+  else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
+  {
+    OutputFuzzySuhu = "Sedang";
+    Serial.println(OutputFuzzySuhu);
+  }
+}
+
+//////////////////////////////////
 
 void setup()
 {
@@ -189,13 +441,23 @@ void setup()
   ph.begin();
   dht.begin();
   timeClient.begin();
+  lcd.init();
+  lcd.clear();
+  lcd.backlight();
+  lcd.createChar(0, Heart);
+  // //lcd.begin(16,2);
+  lcd.setCursor(0,0);   //Set cursor to character 2 on line 0
+  lcd.print("AZMI");
+  lcd.setCursor(4,0);
+  lcd.write(0);
+  lcd.setCursor(5,0);   //Move cursor to character 2 on line 1
+  lcd.print("CYNDI");
 }
 
 void loop()
 {
 
   timeClient.update();
-
   if (!client.connected())
   {
     reconnect();
@@ -248,7 +510,7 @@ void loop()
     dtostrf(phValue, 6, 3, res);
     // Serial.print("Publish message: ");
     snprintf(msg, MSG_BUFFER_SIZE, res, value);
-    client.publish("ph", msg);
+    client.publish("1710510160@stmikbumigora.ac.id/sensor/ph", msg);
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
 
@@ -273,7 +535,9 @@ void loop()
     {
       Serial.print(F("Temperature: "));
       Serial.print(event.temperature);
+      suhuArea = event.temperature;
       Serial.println(F("°C"));
+
       dtostrf(event.temperature, 3, 0, res);
       snprintf(msg, MSG_BUFFER_SIZE, res, value);
       client.publish("1710510160@stmikbumigora.ac.id/sensor/suhu", msg);
@@ -295,190 +559,22 @@ void loop()
     }
 
     //--------------------------------------------------------------------------
-
+    outputLCD(phValue,distance,suhuArea,temperature);
+    
+    fuzzy();
+    defuzzyfikasi();
+    basis_aturan_fuzzyPh();
+    basis_aturan_fuzzySuhu();
     //------------------------------------------------------------------------------
   }
   ph.calibration(voltage, temperature);
+  
 }
+
 
 //sini
 
-// float uAnggota, uRendah, uSedang, uTinggi,
-//     uAsam, uNetral, uBasa, uDingin, uNormal, uPanas;
+/////////////////////////////////////////////////////////////
 
-// float keluaranSuhu;
-// float coa_ph;
-// float keluaranPh;
 
-// float kondisiSuhu;
-// float kondisiPh;
-// float kondisiVolume;
 
-// void hitung_anggota(int anggota, float Nilai, float A, float B, float C)
-// {
-//   switch (anggota)
-//   {
-//   case 1:
-//     if ((Nilai >= A) && (Nilai <= B))
-//       uAnggota = 1;
-//     if ((Nilai > B) && (Nilai < C))
-//       uAnggota = (Nilai - A) / (B - A);
-//     if ((Nilai >= A) && (Nilai <= B))
-//       uAnggota = 0;
-//     break;
-//   case 2:
-//     if ((Nilai >= A) && (Nilai <= B))
-//       uAnggota = 1;
-//     if ((Nilai > B) && (Nilai < C))
-//       uAnggota = (Nilai - A) / (B - A);
-//     if ((Nilai >= A) && (Nilai <= B))
-//       uAnggota = 0;
-//     break;
-//   case 3:
-//     if ((Nilai >= A) && (Nilai <= B))
-//       uAnggota = 1;
-//     if ((Nilai > B) && (Nilai < C))
-//       uAnggota = (Nilai - A) / (B - A);
-//     if ((Nilai >= A) && (Nilai <= B))
-//       uAnggota = 0;
-//     break;
-//   }
-// }
-
-// //fuzzyfikasi
-// void fuzzy()
-// {
-//   // int uAnggota;
-//   //tinggi air
-//   //angka 4 diganti pake variabel yg nampung air
-//   uAnggota = 0;
-//   hitung_anggota(1, distance, 0, 3, 6);
-//   uRendah = uAnggota;
-//   hitung_anggota(2, distance, 3, 6, 9);
-//   uSedang = uAnggota;
-//   hitung_anggota(3, distance, 6, 9, 9);
-//   uTinggi = uAnggota;
-
-//   //Ph
-//   uAnggota = 0;
-//   hitung_anggota(1, phValue, 0, 3, 6);
-//   uAsam = uAnggota;
-//   hitung_anggota(2, phValue, 3, 6, 9);
-//   uNetral = uAnggota;
-//   hitung_anggota(3, phValue, 6, 9, 9);
-//   uBasa = uAnggota;
-
-//   //suhu
-//   uAnggota = 0;
-//   hitung_anggota(1, event.temperature, 0, 3, 6);
-//   uDingin = uAnggota;
-//   hitung_anggota(2, event.temperature, 3, 6, 9);
-//   uNormal = uAnggota;
-//   hitung_anggota(3, event.temperature, 6, 9, 9);
-//   uPanas = uAnggota;
-// }
-
-// float fuzzy_setSuhu[3][3] = {
-//     {15, 15, 35},
-//     {15, 35, 50},
-//     {35, 50, 50},
-// };
-
-// float fuzzy_setPh[3][3] = {
-//     {15, 15, 35},
-//     {15, 35, 50},
-//     {35, 50, 50},
-// };
-
-// void defuzzyfikasi()
-// {
-//   float pembilangSuhu = 0, penyebutSuhu = 0,
-//         pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph;
-
-//   float N_suhu[3] = {};
-//   float N_ph[3] = {};
-//   float N_volume[3] = {};
-
-//   for (int set = 0; set < 9;)
-//   {
-//     for (int i = 0; i < 3; i++)
-//     {
-//       for (int j = 0; j < 3; j++)
-//       {
-//         //suhu
-//         float data_uSuhu[3] = {uDingin, uNormal, uPanas};
-//         N_suhu[i] = {data_uSuhu[i]};
-
-//         //ph
-//         float data_uPh[3] = {uAsam, uNetral, uBasa};
-//         N_ph[i] = {data_uPh[i]};
-
-//         //volume
-//         float data_uVolume[3] = {uRendah, uSedang, uTinggi};
-//         float N_volume[i] = {data_uVolume[i]};
-
-//         kondisiSuhu = max(N_suhu[i], kondisiSuhu);
-//         kondisiPh = max(N_ph[i], kondisiPh);
-//         kondisiVolume = max(N_volume[i], kondisiVolume);
-
-//         //coa
-//         //suhu
-//         float Min_suhu[set] = {min(N_suhu[i], N_volume[j])};
-//         float pembilangSuhu =+ Min_suhu[set] * fuzzy_setSuhu[i][j];
-//         float penyebutSuhu =+ Min_suhu[set];
-
-//         //ph
-//         float Min_ph[set] = {min(N_ph[i], N_volume[j])};
-//         pembilangPh =+Min_ph[set] * fuzzy_setPh[i][j];
-//         penyebutPh =+Min_ph[set];
-//         delay(5);
-//         set++;
-//       }
-//     }
-//     //coa
-//     coa_suhu = pembilangSuhu / penyebutSuhu;
-//     keluaranSuhu = coa_suhu;
-
-//     coa_ph = pembilangPh / penyebutPh;
-//     keluaranPh = coa_ph;
-//   }
-// }
-// String OutputFuzzySuhu;
-
-// void basis_aturan_fuzzySuhu()
-// {
-//   if (kondisiSuhu == uDingin && kondisiVolume == uRendah)
-//   {
-//     OutputFuzzySuhu = "Lambat";
-//     Serial.println(OutputFuzzySuhu);
-//   }
-//   else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
-//   {
-//     OutputFuzzySuhu = "Lambat";
-//     Serial.println(OutputFuzzySuhu);
-//   }
-//   else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
-//   {
-//     OutputFuzzySuhu = "Sedang";
-//     Serial.println(OutputFuzzySuhu);
-//   }
-// }
-
-// void basis_aturan_fuzzyPh()
-// {
-//   if (kondisiSuhu == uDingin && kondisiVolume == uRendah)
-//   {
-//     OutputFuzzySuhu = "Lambat";
-//     Serial.println(OutputFuzzySuhu);
-//   }
-//   else if (kondisiSuhu == uDingin && kondisiVolume == uSedang)
-//   {
-//     OutputFuzzySuhu = "Lambat";
-//     Serial.println(OutputFuzzySuhu);
-//   }
-//   else if (kondisiSuhu == uDingin && kondisiVolume == uTinggi)
-//   {
-//     OutputFuzzySuhu = "Sedang";
-//     Serial.println(OutputFuzzySuhu);
-//   }
-// }
