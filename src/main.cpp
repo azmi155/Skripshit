@@ -73,8 +73,8 @@ uint32_t delayMS;
 //NTPClient timeClient(ntpUDP);
 
 
-float uAnggota, uRendah, uSedang, uTinggi,
-    uAsam, uNetral, uBasa, uDingin, uNormal, uPanas;
+float uAnggota, uRendah, uSedang, uTinggi, N_suhu[3],N_ph[3],N_volume[3],
+    uAsam, uNetral, uBasa, uDingin, uNormal, uPanas, Min_ph[9],Min_suhu[9];
 
 float keluaranSuhu;
 float coa_ph;
@@ -289,24 +289,24 @@ void fuzzy()
 
   //Ph
   uAnggota = 0;
-  hitung_anggota(1, phValue, 0, 3, 6);
+  hitung_anggota(1, phValue, 0, 5, 7);
   uAsam = uAnggota;
-  hitung_anggota(2, phValue, 3, 6, 9);
+  hitung_anggota(2, phValue, 5, 7, 9);
   uNetral = uAnggota;
-  hitung_anggota(3, phValue, 6, 9, 9);
+  hitung_anggota(3, phValue, 7, 9, 14);
   uBasa = uAnggota;
   
 
   //suhu
   uAnggota = 0;
-  hitung_anggota(1, event.temperature, 0, 3, 6);
+  hitung_anggota(1, suhuArea, 0, 25, 30);
   uDingin = uAnggota;
-  hitung_anggota(2, event.temperature, 3, 6, 9);
+  hitung_anggota(2, suhuArea, 25, 30, 35);
   uNormal = uAnggota;
-  hitung_anggota(3, event.temperature, 6, 9, 9);
+  hitung_anggota(3, suhuArea, 30, 35, 60);
   uPanas = uAnggota;
 
-  Serial.print("FUZZY");
+
 }
 
 float fuzzy_setSuhu[3][3] = {
@@ -316,34 +316,35 @@ float fuzzy_setSuhu[3][3] = {
 };
 
 float fuzzy_setPh[3][3] = {
-    {15, 15, 35},
-    {15, 35, 50},
-    {35, 50, 50},
+    {1, 1, 2},
+    {1, 2, 3},
+    {2, 3, 3},
 };
+
+
 
 void defuzzyfikasi()
 {
-  Serial.println("MASUK DEFUZZY");
-  float pembilangSuhu = 0, penyebutSuhu = 0,
-        pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph;
 
-  float N_suhu[3] = {};
-  float N_ph[3] = {};
-  float N_volume[3] = {};
+  float pembilangSuhu = 0, penyebutSuhu = 0,
+        pembilangPh = 0, penyebutPh = 0, coa_suhu = 0, coa_ph=0;
+
+
+  N_suhu [3]  = {};
+  N_ph[3] = {};
+  N_volume[3] = {};
 
   for (int set = 0; set < 9;)
   {
-    Serial.println("Perulangan 1");
     for (int i = 0; i < 3; i++)
     {
-      Serial.println("Perulangan 2");
+
       for (int j = 0; j < 3; j++)
       {
-        Serial.println("Perulangan 3");
+
         //suhu
         float data_uSuhu[3] = {uDingin, uNormal, uPanas};
         N_suhu[i] = {data_uSuhu[i]};
-
         //ph
         float data_uPh[3] = {uAsam, uNetral, uBasa};
         N_ph[i] = {data_uPh[i]};
@@ -352,23 +353,24 @@ void defuzzyfikasi()
         float data_uVolume[3] = {uRendah, uSedang, uTinggi};
         float N_volume[i] = {data_uVolume[i]};
 
+
         kondisiSuhu = max(N_suhu[i], kondisiSuhu);
         kondisiPh = max(N_ph[i], kondisiPh);
         kondisiVolume = max(N_volume[i], kondisiVolume);
 
         //coa
         //suhu
-        float Min_suhu[set] = {min(N_suhu[i], N_volume[j])};
-        float pembilangSuhu = +Min_suhu[set] * fuzzy_setSuhu[i][j];
-        float penyebutSuhu = +Min_suhu[set];
+        Min_suhu[set] = {min(N_suhu[i], N_volume[j])};
+        pembilangSuhu += Min_suhu[set] * fuzzy_setSuhu[i][j];
+        penyebutSuhu += Min_suhu[set];
 
         //ph
-        float Min_ph[set] = {min(N_ph[i], N_volume[j])};
-        pembilangPh = +Min_ph[set] * fuzzy_setPh[i][j];
-        penyebutPh = +Min_ph[set];
+        Min_ph[set] = {min(N_ph[i], N_volume[j])};
+        pembilangPh += Min_ph[set] * fuzzy_setPh[i][j];
+        penyebutPh += Min_ph[set];
         delay(5);
-        set++;
-        Serial.print("LAGI HITUNG");
+        set ++;
+        
       }
     }
     //coa
@@ -378,9 +380,11 @@ void defuzzyfikasi()
     coa_ph = pembilangPh / penyebutPh;
     keluaranPh = coa_ph;
     Serial.print("KELUARAN PH: ");
-    Serial.print(keluaranPh);
+    Serial.println(keluaranPh);
+    Serial.print("KELUARAN SUHU: ");
+    Serial.println(keluaranSuhu);
   }
-  Serial.print("DEFUZZY");
+  
 }
 
 
@@ -560,11 +564,13 @@ void loop()
 
     //--------------------------------------------------------------------------
     outputLCD(phValue,distance,suhuArea,temperature);
-    
+    Serial.println("----------FUZZYYY---------");
     fuzzy();
     defuzzyfikasi();
     basis_aturan_fuzzyPh();
     basis_aturan_fuzzySuhu();
+    Serial.println("-------------------------");
+
     //------------------------------------------------------------------------------
   }
   ph.calibration(voltage, temperature);
