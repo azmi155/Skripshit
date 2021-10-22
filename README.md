@@ -5,5 +5,5 @@
 | NAME | GITHUB LINK |
 | ----- | ----------- |
 |Cyndi Putri Utami | [Cyndi](https://github.com/cyndiputriutami09) |
-|ULUL AZMI | [Cyndi](https://github.com/azmi15) |
-
+|ULUL AZMI | [AZMI](https://github.com/azmi15) |
+|ULUL AZMI | [AZMI](https://github.com/azmi155) |
